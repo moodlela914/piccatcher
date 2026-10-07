@@ -1,0 +1,1948 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>童趣島嶼拍貼機 Taiwan Fun Photo Booth</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Zen Maru Gothic & Fredoka -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            fun: ['"Zen Maru Gothic"', '"Fredoka"', 'cursive', 'sans-serif'],
+          },
+          colors: {
+            twRed: '#E63946',
+            twBlue: '#1D3557',
+            twGold: '#F4A261',
+            twCream: '#FBF8F1',
+            twPastelGreen: '#A8D5BA',
+            twNoodle: '#F7EDE2',
+            twLycheeRed: '#D62246',
+            twPineapple: '#FFB703',
+          },
+          animation: {
+            'bounce-slow': 'bounce 2.5s infinite',
+            'pulse-fast': 'pulse 0.8s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'wiggle': 'wiggle 1s ease-in-out infinite',
+          },
+          keyframes: {
+            wiggle: {
+              '0%, 100%': { transform: 'rotate(-4deg)' },
+              '50%': { transform: 'rotate(4deg)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Zen Maru Gothic', 'Fredoka', cursive, sans-serif;
+      background-color: #FFFDF9;
+      background-image: radial-gradient(#F4A26122 1.5px, transparent 1.5px), radial-gradient(#1D355715 1.5px, #FFFDF9 1.5px);
+      background-size: 30px 30px;
+      background-position: 0 0, 15px 15px;
+      user-select: none;
+    }
+    
+    .cartoon-card {
+      border: 4px solid #2B2D42;
+      box-shadow: 6px 6px 0px #2B2D42;
+      border-radius: 1.5rem;
+    }
+
+    .cartoon-btn {
+      border: 3px solid #2B2D42;
+      box-shadow: 4px 4px 0px #2B2D42;
+      transition: all 0.15s ease-in-out;
+    }
+    .cartoon-btn:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0px #2B2D42;
+    }
+    .cartoon-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0px #2B2D42;
+    }
+
+    /* Flash screen effect */
+    #flashOverlay {
+      transition: opacity 0.4s ease-out;
+    }
+
+    /* Custom canvas styling */
+    #liveCanvas, #studioCanvas {
+      max-width: 100%;
+      height: auto;
+      border-radius: 1rem;
+      border: 3px solid #2B2D42;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex flex-col text-slate-800 antialiased overflow-x-hidden">
+
+  <header class="w-full py-4 px-6 bg-white/90 backdrop-blur-md border-b-4 border-slate-800 sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <span class="text-3xl animate-bounce-slow">🎈</span>
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-wider flex items-center gap-2">
+            童趣島嶼拍貼機
+            <span class="text-xs bg-twRed text-white font-bold px-2 py-0.5 rounded-full border-2 border-slate-800 shadow-sm">
+              Taiwan Fun
+            </span>
+          </h1>
+          <p class="text-xs sm:text-sm font-bold text-slate-500">國慶 ‧ 米粉 ‧ 荔枝 ‧ 鳳梨 快樂定格時光</p>
+        </div>
+      </div>
+
+      <!-- Quick status / tips -->
+      <div class="flex items-center gap-2">
+        <div id="camStatusBadge" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 border-2 border-slate-800 rounded-full text-xs font-bold text-slate-800">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
+          <span>準備拍攝中</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    
+    <!-- LEFT PANEL: Capture & Studio Workspace (7 cols) -->
+    <div class="lg:col-span-7 flex flex-col items-center">
+      
+      <!-- Video / Live Canvas Container -->
+      <div id="cameraViewportContainer" class="relative w-full max-w-md bg-white p-3 sm:p-4 cartoon-card flex flex-col items-center">
+        
+        <!-- Live Countdown Overlay -->
+        <div id="countdownBadge" class="hidden absolute z-30 inset-0 flex items-center justify-center bg-black/30 backdrop-blur-xs rounded-2xl">
+          <div class="w-32 h-32 rounded-full bg-twPineapple border-4 border-slate-900 shadow-2xl flex items-center justify-center animate-ping">
+            <span id="countdownNumber" class="text-7xl font-black text-slate-900 font-fun">3</span>
+          </div>
+        </div>
+
+        <!-- Shutter Flash Overlay -->
+        <div id="flashOverlay" class="pointer-events-none absolute inset-0 bg-white opacity-0 z-40 rounded-2xl"></div>
+
+        <!-- Hidden WebCam Video Stream Element -->
+        <video id="webcam" class="hidden" autoplay playsinline muted></video>
+
+        <!-- Live Viewport Canvas (Draws camera + overlay frame in real-time) -->
+        <div class="relative w-full overflow-hidden flex justify-center items-center bg-slate-900/5 rounded-xl">
+          <canvas id="liveCanvas" width="480" height="640" class="w-full h-auto object-contain"></canvas>
+          
+          <!-- Camera fallback prompt when not started -->
+          <div id="cameraStartPrompt" class="absolute inset-0 flex flex-col items-center justify-center bg-twCream p-6 text-center z-20">
+            <div class="w-20 h-20 rounded-full bg-twPineapple border-4 border-slate-800 flex items-center justify-center text-4xl shadow-md mb-4 animate-bounce">
+              📷
+            </div>
+            <h3 class="text-xl font-black text-slate-800 mb-2">準備好拍出童趣美照了嗎？</h3>
+            <p class="text-xs text-slate-600 mb-5 max-w-xs">
+              點擊下方按鈕啟動電腦 Webcam 視訊鏡頭。若無攝影機，也可以切換模擬體驗！
+            </p>
+            <div class="flex flex-wrap gap-3 justify-center">
+              <button id="startCamBtn" class="cartoon-btn px-5 py-2.5 bg-twRed text-white font-black text-sm rounded-xl flex items-center gap-2">
+                <span>✨ 啟動攝影機</span>
+              </button>
+              <button id="mockCamBtn" class="cartoon-btn px-4 py-2.5 bg-slate-100 text-slate-800 font-bold text-xs rounded-xl hover:bg-slate-200">
+                🖼️ 使用範例人像測試
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4-Shot Progress bar indicator (for 4-cut mode) -->
+        <div id="stripProgressContainer" class="hidden w-full mt-3 px-1">
+          <div class="flex justify-between text-xs font-bold text-slate-700 mb-1">
+            <span>四格連拍進度</span>
+            <span id="stripCountText">第 1 / 4 張</span>
+          </div>
+          <div class="grid grid-cols-4 gap-2">
+            <div id="shotBar1" class="h-2.5 rounded-full bg-slate-200 border-2 border-slate-800"></div>
+            <div id="shotBar2" class="h-2.5 rounded-full bg-slate-200 border-2 border-slate-800"></div>
+            <div id="shotBar3" class="h-2.5 rounded-full bg-slate-200 border-2 border-slate-800"></div>
+            <div id="shotBar4" class="h-2.5 rounded-full bg-slate-200 border-2 border-slate-800"></div>
+          </div>
+        </div>
+
+        <!-- Quick Camera Aux Controls -->
+        <div class="w-full flex items-center justify-between mt-3 px-1 text-xs">
+          <button id="toggleMirrorBtn" class="cartoon-btn px-3 py-1.5 bg-white text-slate-800 font-bold rounded-lg flex items-center gap-1.5">
+            <span>🪞 鏡像翻轉: <b id="mirrorStateText" class="text-twRed">開啟</b></span>
+          </button>
+          <div class="flex items-center gap-2">
+            <label class="font-bold text-slate-700">倒數：</label>
+            <button id="timer3sBtn" class="timer-btn cartoon-btn px-2.5 py-1 bg-twPineapple font-black rounded-md">3秒</button>
+            <button id="timer5sBtn" class="timer-btn cartoon-btn px-2.5 py-1 bg-white font-bold rounded-md">5秒</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAIN ACTION SHUTTER BUTTON -->
+      <div class="mt-4 flex flex-col items-center">
+        <button id="shutterBtn" class="cartoon-btn relative group px-10 py-4 bg-gradient-to-r from-twRed to-pink-500 text-white rounded-full flex items-center gap-3 transition-transform active:scale-95 shadow-lg cursor-pointer">
+          <span class="text-3xl group-hover:scale-125 transition-transform">📸</span>
+          <span id="shutterText" class="text-xl sm:text-2xl font-black tracking-wide">開始拍攝</span>
+          <div class="absolute -top-2 -right-2 px-2 py-0.5 bg-yellow-300 text-slate-900 border-2 border-slate-900 rounded-full text-xs font-black rotate-12">
+            Click!
+          </div>
+        </button>
+        <p class="text-xs text-slate-500 font-bold mt-2">按下後會自動進入倒數計時並響起提示音</p>
+      </div>
+
+      <!-- Post-Capture Studio Canvas Container (Hidden until photo is taken) -->
+      <div id="studioContainer" class="hidden w-full max-w-md bg-white p-4 cartoon-card mt-6 flex flex-col items-center">
+        <div class="w-full flex justify-between items-center mb-3">
+          <h3 class="font-black text-lg text-slate-800 flex items-center gap-1.5">
+            <span>🎨</span> 拍貼後製工作台
+          </h3>
+          <span class="text-xs font-bold px-2 py-1 bg-green-100 text-green-800 border-2 border-slate-800 rounded-lg">
+            成品已生成！可塗鴉與貼圖
+          </span>
+        </div>
+
+        <div class="relative w-full flex justify-center bg-slate-100 rounded-xl p-2 border-2 border-slate-300">
+          <!-- Final Composite Canvas -->
+          <canvas id="studioCanvas" width="480" height="640" class="max-w-full h-auto shadow-md"></canvas>
+        </div>
+
+        <!-- Studio Control Tools (Doodle, Stickers, Reset) -->
+        <div class="w-full mt-4 space-y-3">
+          <!-- Tool tabs: Stickers / Brush -->
+          <div class="flex gap-2">
+            <button id="tabStickerBtn" class="flex-1 cartoon-btn py-2 bg-twPineapple font-black text-xs rounded-xl">
+              🧸 戳戳貼圖庫
+            </button>
+            <button id="tabDoodleBtn" class="flex-1 cartoon-btn py-2 bg-white text-slate-700 font-bold text-xs rounded-xl">
+              ✏️ 手寫塗鴉筆
+            </button>
+          </div>
+
+          <!-- Stickers Tray -->
+          <div id="stickersTray" class="p-3 bg-amber-50 rounded-xl border-2 border-slate-800 flex flex-wrap gap-2 justify-center items-center">
+            <span class="text-xs font-bold text-slate-500 w-full text-center">點擊貼圖即可貼到照片中央（可直接拖曳位置）：</span>
+            <!-- Cartoon SVG Sticker buttons -->
+            <button class="sticker-add-btn cartoon-btn p-1.5 bg-white rounded-lg text-2xl hover:scale-110" data-sticker="flag">🇹🇼</button>
+            <button class="sticker-add-btn cartoon-btn p-1.5 bg-white rounded-lg text-2xl hover:scale-110" data-sticker="lychee">🍒</button>
+            <button class="sticker-add-btn cartoon-btn p-1.5 bg-white rounded-lg text-2xl hover:scale-110" data-sticker="pineapple">🍍</button>
+            <button class="sticker-add-btn cartoon-btn p-1.5 bg-white rounded-lg text-2xl hover:scale-110" data-sticker="noodle">🍜</button>
+            <button class="sticker-add-btn cartoon-btn p-1.5 bg-white rounded-lg text-2xl hover:scale-110" data-sticker="sunglasses">🕶️</button>
+            <button class="sticker-add-btn cartoon-btn p-1.5 bg-white rounded-lg text-2xl hover:scale-110" data-sticker="heart">💖</button>
+            <button class="sticker-add-btn cartoon-btn p-1.5 bg-white rounded-lg text-2xl hover:scale-110" data-sticker="star">⭐</button>
+            <button class="sticker-add-btn cartoon-btn p-1.5 bg-white rounded-lg text-2xl hover:scale-110" data-sticker="sparkles">✨</button>
+            <button class="sticker-add-btn cartoon-btn p-1.5 bg-white rounded-lg text-2xl hover:scale-110" data-sticker="boba">🧋</button>
+            <button class="sticker-add-btn cartoon-btn p-1.5 bg-white rounded-lg text-2xl hover:scale-110" data-sticker="crown">👑</button>
+            <button id="clearStickersBtn" class="cartoon-btn px-2.5 py-1 bg-rose-100 text-rose-700 text-xs font-bold rounded-lg hover:bg-rose-200">
+              清空貼圖
+            </button>
+          </div>
+
+          <!-- Doodle Paint Tray (Hidden by default) -->
+          <div id="doodleTray" class="hidden p-3 bg-blue-50 rounded-xl border-2 border-slate-800 flex flex-col gap-2">
+            <div class="flex items-center justify-between text-xs font-bold">
+              <span>筆刷顏色：</span>
+              <div class="flex gap-2">
+                <button class="brush-color-btn w-6 h-6 rounded-full border-2 border-slate-800 bg-[#E63946] focus:ring-2 ring-slate-800" data-color="#E63946"></button>
+                <button class="brush-color-btn w-6 h-6 rounded-full border-2 border-slate-800 bg-[#1D3557]" data-color="#1D3557"></button>
+                <button class="brush-color-btn w-6 h-6 rounded-full border-2 border-slate-800 bg-[#FFB703]" data-color="#FFB703"></button>
+                <button class="brush-color-btn w-6 h-6 rounded-full border-2 border-slate-800 bg-[#2A9D8F]" data-color="#2A9D8F"></button>
+                <button class="brush-color-btn w-6 h-6 rounded-full border-2 border-slate-800 bg-white" data-color="#FFFFFF"></button>
+                <button class="brush-color-btn w-6 h-6 rounded-full border-2 border-slate-800 bg-slate-900" data-color="#000000"></button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between text-xs font-bold mt-1">
+              <span>筆刷粗細：</span>
+              <input id="brushSize" type="range" min="2" max="24" value="6" class="w-32 accent-twRed">
+              <button id="clearDoodleBtn" class="cartoon-btn px-2.5 py-1 bg-white text-slate-800 text-xs rounded-lg">
+                清除筆跡
+              </button>
+            </div>
+          </div>
+
+          <!-- Download and Restart Action Buttons -->
+          <div class="flex flex-col sm:flex-row gap-3 pt-2">
+            <button id="downloadBtn" class="flex-1 cartoon-btn py-3.5 bg-twRed text-white font-black text-base rounded-xl flex items-center justify-center gap-2">
+              <span>💾 下載我的童趣拍貼 (PNG)</span>
+            </button>
+            <button id="previewModalBtn" class="cartoon-btn px-4 py-3.5 bg-twPineapple text-slate-900 font-black text-sm rounded-xl hover:bg-yellow-400 flex items-center justify-center gap-1.5" title="手機長按儲存或預覽大圖">
+              <span>👁️ 大圖/手機儲存</span>
+            </button>
+            <button id="retakeBtn" class="cartoon-btn px-4 py-3.5 bg-white text-slate-800 font-black text-sm rounded-xl hover:bg-slate-100 flex items-center justify-center gap-1.5">
+              <span>🔄 再拍一次</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT PANEL: Theme Customization & Layout Config (5 cols) -->
+    <div class="lg:col-span-5 flex flex-col gap-6">
+      
+      <!-- STEP 1: Format Style Selection (Single vs 4-Cut Strip) -->
+      <div class="bg-white p-5 cartoon-card">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-black text-lg text-slate-800 flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-twPineapple text-slate-900 text-xs font-black flex items-center justify-center">1</span>
+            選擇照片版型格式
+          </h2>
+          <span class="text-xs font-bold text-slate-400">兩種經典玩法</span>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <!-- Single Polaroid Button -->
+          <button id="modeSingleBtn" class="mode-select-btn cartoon-btn p-3 bg-twCream border-twRed flex flex-col items-center gap-2 rounded-2xl text-left relative overflow-hidden group">
+            <div class="w-12 h-14 bg-white border-2 border-slate-800 rounded shadow-sm flex flex-col items-center justify-center p-1">
+              <div class="w-full h-8 bg-amber-100 rounded-sm"></div>
+              <div class="w-6 h-1 bg-slate-300 mt-1 rounded"></div>
+            </div>
+            <span class="font-black text-sm text-slate-800">經典單張拍立得</span>
+            <span class="text-[11px] font-bold text-slate-500">大畫幅 ‧ 精緻聚焦</span>
+            <div class="mode-check absolute top-2 right-2 text-xs bg-twRed text-white rounded-full w-5 h-5 flex items-center justify-center font-bold">✓</div>
+          </button>
+
+          <!-- 4-Cut Strip Button -->
+          <button id="modeStripBtn" class="mode-select-btn cartoon-btn p-3 bg-white border-slate-800 flex flex-col items-center gap-2 rounded-2xl text-left relative overflow-hidden group">
+            <div class="w-10 h-16 bg-white border-2 border-slate-800 rounded shadow-sm flex flex-col items-center justify-between p-1">
+              <div class="w-full h-2.5 bg-blue-100 rounded-xs"></div>
+              <div class="w-full h-2.5 bg-rose-100 rounded-xs"></div>
+              <div class="w-full h-2.5 bg-yellow-100 rounded-xs"></div>
+              <div class="w-full h-2.5 bg-emerald-100 rounded-xs"></div>
+            </div>
+            <span class="font-black text-sm text-slate-800">韓系人生四格條</span>
+            <span class="text-[11px] font-bold text-slate-500">自動連續 4 連拍</span>
+            <div class="mode-check hidden absolute top-2 right-2 text-xs bg-twRed text-white rounded-full w-5 h-5 flex items-center justify-center font-bold">✓</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 2: The 4 Taiwan Custom Themes -->
+      <div class="bg-white p-5 cartoon-card">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-black text-lg text-slate-800 flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-twPineapple text-slate-900 text-xs font-black flex items-center justify-center">2</span>
+            四款台灣童趣主題模板
+          </h2>
+          <span class="text-xs font-bold text-slate-400">即時更換</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <!-- 1. Double Tenth -->
+          <button class="theme-card cartoon-btn p-3 rounded-2xl flex flex-col items-start gap-2 bg-[#1D3557] text-white border-2 border-slate-900 relative ring-4 ring-twRed" data-theme="nationalDay">
+            <div class="flex items-center justify-between w-full">
+              <span class="text-2xl">🇹🇼</span>
+              <span class="px-2 py-0.5 rounded-full bg-twRed text-[10px] font-black">雙十慶典</span>
+            </div>
+            <span class="font-black text-sm">雙十嘉年華</span>
+            <span class="text-[10px] text-slate-200">戴派對帽的十十兄弟與彩色幾何煙火</span>
+          </button>
+
+          <!-- 2. Rice Noodles -->
+          <button class="theme-card cartoon-btn p-3 rounded-2xl flex flex-col items-start gap-2 bg-[#F7EDE2] text-slate-800 border-2 border-slate-900 relative" data-theme="noodles">
+            <div class="flex items-center justify-between w-full">
+              <span class="text-2xl">🍜</span>
+              <span class="px-2 py-0.5 rounded-full bg-[#E07A5F] text-white text-[10px] font-black">芬園名產</span>
+            </div>
+            <span class="font-black text-sm">芬園Q彈米粉</span>
+            <span class="text-[10px] text-slate-600">打蝴蝶結的米粉精靈與八卦山微風小雲</span>
+          </button>
+
+          <!-- 3. Sweet Lychee (Verified: Strict Lychee design, NO strawberry!) -->
+          <button class="theme-card cartoon-btn p-3 rounded-2xl flex flex-col items-start gap-2 bg-[#FFF0F3] text-slate-800 border-2 border-slate-900 relative" data-theme="lychee">
+            <div class="flex items-center justify-between w-full">
+              <span class="text-2xl">🍒</span>
+              <span class="px-2 py-0.5 rounded-full bg-[#D62246] text-white text-[10px] font-black">夏日多汁</span>
+            </div>
+            <span class="font-black text-sm">甜蜜鮮採荔枝</span>
+            <span class="text-[10px] text-slate-600">半剝果殼晶瑩果肉、綠葉小樹枝波點</span>
+          </button>
+
+          <!-- 4. Lucky Pineapple -->
+          <button class="theme-card cartoon-btn p-3 rounded-2xl flex flex-col items-start gap-2 bg-[#FEF9E7] text-slate-800 border-2 border-slate-900 relative" data-theme="pineapple">
+            <div class="flex items-center justify-between w-full">
+              <span class="text-2xl">🍍</span>
+              <span class="px-2 py-0.5 rounded-full bg-[#F4A261] text-slate-900 text-[10px] font-black">吉利招財</span>
+            </div>
+            <span class="font-black text-sm">旺旺來大鳳梨</span>
+            <span class="text-[10px] text-slate-600">戴酷墨鏡的陽光鳳梨與切片小紋樣</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 3: Camera Color Filters & Options -->
+      <div class="bg-white p-5 cartoon-card">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-black text-lg text-slate-800 flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-twPineapple text-slate-900 text-xs font-black flex items-center justify-center">3</span>
+            拍貼風格濾鏡
+          </h2>
+          <span class="text-xs font-bold text-slate-400">實時調色</span>
+        </div>
+
+        <div class="grid grid-cols-4 gap-2">
+          <button class="filter-btn cartoon-btn py-2 px-1 bg-twCream font-bold text-xs rounded-xl border-twRed ring-2 ring-twRed text-center" data-filter="normal">
+            自然原色
+          </button>
+          <button class="filter-btn cartoon-btn py-2 px-1 bg-white font-bold text-xs rounded-xl text-center" data-filter="fairy">
+            🌸 粉嫩童話
+          </button>
+          <button class="filter-btn cartoon-btn py-2 px-1 bg-white font-bold text-xs rounded-xl text-center" data-filter="vintage">
+            🌇 暖陽微風
+          </button>
+          <button class="filter-btn cartoon-btn py-2 px-1 bg-white font-bold text-xs rounded-xl text-center" data-filter="bw">
+            🖤 復古黑白
+          </button>
+        </div>
+
+        <!-- Extra options (Date stamp, custom bottom caption) -->
+        <div class="mt-4 pt-3 border-t-2 border-slate-100 flex flex-col gap-2">
+          <div class="flex items-center justify-between text-xs font-bold text-slate-700">
+            <span>加蓋當日回憶日期戳章：</span>
+            <input id="dateStampCheckbox" type="checkbox" checked class="w-4 h-4 accent-twRed cursor-pointer">
+          </div>
+          <div class="flex items-center gap-2 mt-1">
+            <input id="customTextCaption" type="text" placeholder="輸入你想印在底部的簽名或小字..." maxlength="20" class="flex-1 px-3 py-1.5 border-2 border-slate-800 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-twRed">
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <div id="toastNotification" class="fixed bottom-6 right-6 z-50 transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none">
+    <div class="cartoon-card bg-slate-900 text-white px-5 py-3 flex items-center gap-3 shadow-2xl">
+      <span id="toastIcon" class="text-2xl">💡</span>
+      <span id="toastMessage" class="text-xs sm:text-sm font-black">訊息通知</span>
+    </div>
+  </div>
+
+  <!-- Download Preview & Mobile Save Modal -->
+  <div id="saveModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="cartoon-card bg-white max-w-lg w-full p-5 flex flex-col items-center max-h-[90vh] overflow-y-auto">
+      <div class="w-full flex items-center justify-between pb-3 border-b-2 border-slate-200 mb-3">
+        <h3 class="font-black text-lg text-slate-800 flex items-center gap-2">
+          <span>🎉</span> 拍貼成品已準備完成！
+        </h3>
+        <button id="closeModalBtn" class="w-8 h-8 rounded-full bg-slate-100 border-2 border-slate-800 font-black text-slate-600 hover:bg-slate-200 flex items-center justify-center">
+          ✕
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-500 font-bold mb-3 text-center">
+        電腦將自動啟動檔案下載；手機或平板用戶亦可<b>長按下方圖片</b>直接選擇「儲存至照片」！
+      </p>
+
+      <div class="p-2 bg-slate-100 rounded-xl border-2 border-slate-300 max-h-[60vh] overflow-hidden flex items-center justify-center">
+        <img id="modalResultImage" class="max-h-[55vh] max-w-full rounded-lg object-contain shadow-md" alt="拍貼成品預覽" />
+      </div>
+
+      <div class="w-full flex gap-3 mt-4">
+        <button id="modalDirectDownloadBtn" class="flex-1 cartoon-btn py-3 bg-twRed text-white font-black text-sm rounded-xl flex items-center justify-center gap-2">
+          <span>💾 重新觸發下載 (PNG)</span>
+        </button>
+        <button id="modalCloseBtn2" class="cartoon-btn px-5 py-3 bg-slate-100 text-slate-800 font-bold text-sm rounded-xl hover:bg-slate-200">
+          關閉
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Core State
+    let currentMode = 'single'; // 'single' or 'strip'
+    let currentTheme = 'nationalDay'; // 'nationalDay', 'noodles', 'lychee', 'pineapple'
+    let currentFilter = 'normal'; // 'normal', 'fairy', 'vintage', 'bw'
+    let countdownDuration = 3; // 3 or 5 seconds
+    let isMirror = true;
+    let isCountingDown = false;
+    let isMockMode = false;
+    let dateStampEnabled = true;
+    let customCaption = "TAIWAN MEMORIES 2026";
+
+    // Media stream state
+    let mediaStream = null;
+    const video = document.getElementById('webcam');
+    const liveCanvas = document.getElementById('liveCanvas');
+    const liveCtx = liveCanvas.getContext('2d');
+    
+    // Final studio canvas state
+    const studioCanvas = document.getElementById('studioCanvas');
+    const studioCtx = studioCanvas.getContext('2d');
+    let capturedShots = []; // Holds Image objects for the photo(s)
+    let stickersOnCanvas = []; // { id, type, x, y, size }
+    let doodlePaths = []; // Array of { color, size, points: [{x,y}] }
+    let isDrawing = false;
+    let currentDoodlePath = null;
+    let activeToolTab = 'sticker'; // 'sticker' or 'doodle'
+    let currentBrushColor = '#E63946';
+    let currentBrushSize = 6;
+    let draggingSticker = null;
+    let dragOffset = { x: 0, y: 0 };
+
+    let audioCtx = null;
+    function playBeep(freq = 600, duration = 0.12, type = 'sine') {
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (err) {
+        console.debug('Audio not allowed yet:', err);
+      }
+    }
+
+    function playShutterSound() {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        
+        // High click + low thump to imitate camera shutter
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.frequency.setValueAtTime(1200, audioCtx.currentTime);
+        gain1.gain.setValueAtTime(0.4, audioCtx.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+        osc1.connect(gain1);
+        gain1.connect(audioCtx.destination);
+        osc1.start();
+        osc1.stop(audioCtx.currentTime + 0.08);
+
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.frequency.setValueAtTime(200, audioCtx.currentTime + 0.08);
+        gain2.gain.setValueAtTime(0.3, audioCtx.currentTime + 0.08);
+        gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.22);
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.start(audioCtx.currentTime + 0.08);
+        osc2.stop(audioCtx.currentTime + 0.22);
+      } catch (e) {
+        console.debug(e);
+      }
+    }
+
+    function showToast(msg, icon = '✨') {
+      const toast = document.getElementById('toastNotification');
+      document.getElementById('toastMessage').textContent = msg;
+      document.getElementById('toastIcon').textContent = icon;
+      toast.classList.remove('translate-y-24', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-24', 'opacity-0');
+      }, 3000);
+    }
+
+    async function startCamera() {
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 960 },
+            facingMode: 'user'
+          },
+          audio: false
+        });
+        video.srcObject = mediaStream;
+        await video.play();
+        isMockMode = false;
+        document.getElementById('cameraStartPrompt').classList.add('hidden');
+        showToast("鏡頭已啟動！請展開最燦爛的笑容！", "📸");
+      } catch (err) {
+        console.warn('Camera access failed, falling back to mock mode:', err);
+        showToast("未偵測到鏡頭或未允許權限，已為您切換模擬體驗模式", "💡");
+        startMockMode();
+      }
+    }
+
+    function startMockMode() {
+      isMockMode = true;
+      document.getElementById('cameraStartPrompt').classList.add('hidden');
+      // Create a cute mock animated face on a hidden canvas to feed into live canvas
+      showToast("已啟動範例測試人像模式！", "🎨");
+    }
+
+    let mockAnimTick = 0;
+    function drawMockVideoFrame(ctx, w, h) {
+      mockAnimTick += 0.04;
+      // Warm gradient background
+      const grad = ctx.createLinearGradient(0, 0, w, h);
+      grad.addColorStop(0, '#FFE8D6');
+      grad.addColorStop(1, '#FFCAD4');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Person silhouette / cute cartoon avatar
+      const cx = w / 2;
+      const cy = h / 2 + Math.sin(mockAnimTick) * 8;
+
+      // Body / Shoulders
+      ctx.fillStyle = '#6D6875';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + 190, 140, 110, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Head
+      ctx.fillStyle = '#FFD166';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 95, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = '#2B2D42';
+      ctx.stroke();
+
+      // Blushing cheeks
+      ctx.fillStyle = '#FF758F';
+      ctx.beginPath();
+      ctx.arc(cx - 50, cy + 20, 16, 0, Math.PI * 2);
+      ctx.arc(cx + 50, cy + 20, 16, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eyes (blinking occasionally)
+      const blink = Math.sin(mockAnimTick * 0.7) > 0.95;
+      ctx.strokeStyle = '#2B2D42';
+      ctx.lineWidth = 5;
+      ctx.lineCap = 'round';
+      if (blink) {
+        ctx.beginPath();
+        ctx.moveTo(cx - 50, cy); ctx.lineTo(cx - 20, cy);
+        ctx.moveTo(cx + 20, cy); ctx.lineTo(cx + 50, cy);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = '#2B2D42';
+        ctx.beginPath();
+        ctx.arc(cx - 35, cy - 5, 10, 0, Math.PI * 2);
+        ctx.arc(cx + 35, cy - 5, 10, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Smile
+      ctx.beginPath();
+      ctx.arc(cx, cy + 15, 30, 0.15 * Math.PI, 0.85 * Math.PI, false);
+      ctx.stroke();
+
+      // Cute Peace Sign Hand waving
+      const handY = cy + 50 + Math.sin(mockAnimTick * 2) * 15;
+      ctx.fillStyle = '#FFD166';
+      ctx.beginPath();
+      ctx.arc(cx + 110, handY, 28, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#2B2D42';
+      ctx.font = 'bold 20px "Zen Maru Gothic"';
+      ctx.fillText('✌️', cx + 98, handY + 8);
+    }
+
+    
+    // 1. Taiwan Double Tenth Theme
+    function drawDoubleTenthFrame(ctx, w, h, isPreview = false) {
+      ctx.save();
+      // Outer border frame
+      ctx.lineWidth = 14;
+      ctx.strokeStyle = '#1D3557';
+      ctx.strokeRect(7, 7, w - 14, h - 14);
+
+      // Top festive bunting pennants
+      const pennantColors = ['#E63946', '#FFB703', '#457B9D', '#F4A261', '#E63946'];
+      const pCount = 7;
+      const pWidth = w / pCount;
+      for (let i = 0; i < pCount; i++) {
+        ctx.fillStyle = pennantColors[i % pennantColors.length];
+        ctx.beginPath();
+        ctx.moveTo(i * pWidth, 14);
+        ctx.lineTo((i + 1) * pWidth, 14);
+        ctx.lineTo(i * pWidth + pWidth / 2, 38);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#1D3557';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+      }
+
+      // Top corner mini fireworks
+      drawMiniFirework(ctx, 42, 60, '#E63946');
+      drawMiniFirework(ctx, w - 42, 60, '#FFB703');
+
+      // Bottom Banner Area
+      const bannerHeight = 85;
+      ctx.fillStyle = '#1D3557';
+      ctx.fillRect(0, h - bannerHeight, w, bannerHeight);
+
+      // Cute Double-Tenth Mascot Brother "十 十" with smiling faces
+      drawDoubleTenthMascot(ctx, 55, h - 42);
+      drawDoubleTenthMascot(ctx, 105, h - 42);
+
+      // Typography
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 22px "Zen Maru Gothic", cursive';
+      ctx.textAlign = 'left';
+      ctx.fillText('台灣加油！雙十快樂 🇹🇼', 140, h - 45);
+
+      ctx.fillStyle = '#FFB703';
+      ctx.font = 'bold 12px "Fredoka", sans-serif';
+      ctx.fillText('HAPPY DOUBLE TENTH FESTIVAL', 142, h - 22);
+
+      // Taiwan heart balloon in bottom right
+      drawTaiwanHeartBalloon(ctx, w - 45, h - 48);
+
+      ctx.restore();
+    }
+
+    function drawMiniFirework(ctx, cx, cy, color) {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3.5;
+      ctx.lineCap = 'round';
+      for (let i = 0; i < 8; i++) {
+        const angle = (i * Math.PI) / 4;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(angle) * 7, cy + Math.sin(angle) * 7);
+        ctx.lineTo(cx + Math.cos(angle) * 20, cy + Math.sin(angle) * 20);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawDoubleTenthMascot(ctx, cx, cy) {
+      ctx.save();
+      // Red Cross Symbol
+      ctx.fillStyle = '#E63946';
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 2;
+      
+      // Vertical bar
+      ctx.fillRect(cx - 8, cy - 25, 16, 50);
+      ctx.strokeRect(cx - 8, cy - 25, 16, 50);
+      // Horizontal bar
+      ctx.fillRect(cx - 24, cy - 10, 48, 16);
+      ctx.strokeRect(cx - 24, cy - 10, 48, 16);
+
+      // Cute smiley face on cross intersection
+      ctx.fillStyle = '#2B2D42';
+      ctx.beginPath();
+      ctx.arc(cx - 4, cy - 4, 2.5, 0, Math.PI * 2);
+      ctx.arc(cx + 4, cy - 4, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#2B2D42';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy + 1, 4, 0, Math.PI);
+      ctx.stroke();
+
+      // Tiny party hat on top
+      ctx.fillStyle = '#FFB703';
+      ctx.beginPath();
+      ctx.moveTo(cx - 8, cy - 25);
+      ctx.lineTo(cx + 8, cy - 25);
+      ctx.lineTo(cx, cy - 40);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawTaiwanHeartBalloon(ctx, cx, cy) {
+      ctx.save();
+      ctx.fillStyle = '#FF758F';
+      ctx.beginPath();
+      ctx.arc(cx - 8, cy - 6, 10, Math.PI, 0, false);
+      ctx.arc(cx + 8, cy - 6, 10, Math.PI, 0, false);
+      ctx.lineTo(cx, cy + 12);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // Balloon string
+      ctx.strokeStyle = '#FFD166';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy + 12);
+      ctx.quadraticCurveTo(cx - 6, cy + 24, cx + 4, cy + 34);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 2. Wind City Rice Noodles Theme
+    function drawNoodlesFrame(ctx, w, h) {
+      ctx.save();
+      // Warm bamboo weave style border
+      ctx.lineWidth = 14;
+      ctx.strokeStyle = '#DDA15E';
+      ctx.strokeRect(7, 7, w - 14, h - 14);
+
+      // Top wavy noodle garland
+      ctx.strokeStyle = '#F7EDE2';
+      ctx.lineWidth = 8;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (let x = 16; x < w - 16; x += 10) {
+        const y = 28 + Math.sin(x * 0.08) * 8;
+        if (x === 16) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Little blowing wind cloud (九降風小雲朵) at top right
+      drawBlowingWindCloud(ctx, w - 60, 48);
+
+      // Bottom banner area
+      const bannerHeight = 85;
+      ctx.fillStyle = '#FAF0CA';
+      ctx.fillRect(0, h - bannerHeight, w, bannerHeight);
+      ctx.strokeStyle = '#DDA15E';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(0, h - bannerHeight, w, bannerHeight);
+
+      // Big smiling bowl of rice noodles with chopsticks
+      drawRiceNoodleBowl(ctx, 60, h - 42);
+
+      // Typography
+      ctx.fillStyle = '#603813';
+      ctx.font = 'bold 22px "Zen Maru Gothic", cursive';
+      ctx.textAlign = 'left';
+      ctx.fillText('芬園Q彈米粉 🍜', 125, h - 45);
+
+      ctx.fillStyle = '#BC6C25';
+      ctx.font = 'bold 12px "Fredoka", sans-serif';
+      ctx.fillText('DELICIOUS RICE NOODLES ‧ 芬園特產限定', 127, h - 22);
+
+      // Scallion & mushroom sprinkles on bottom right
+      ctx.fillStyle = '#588157';
+      ctx.fillRect(w - 70, h - 40, 10, 6);
+      ctx.fillRect(w - 45, h - 50, 12, 6);
+      ctx.fillRect(w - 30, h - 30, 8, 8);
+
+      ctx.restore();
+    }
+
+    function drawRiceNoodleBowl(ctx, cx, cy) {
+      ctx.save();
+      // Ceramic bowl
+      ctx.fillStyle = '#E76F51';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 32, 0, Math.PI, false);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#2B2D42';
+      ctx.lineWidth = 3.5;
+      ctx.stroke();
+
+      // Rice noodles swirling out
+      ctx.strokeStyle = '#FEFAE0';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(cx, cy - 8, 16, Math.PI, 0, false);
+      ctx.arc(cx - 8, cy - 14, 12, 0, Math.PI * 1.5, false);
+      ctx.stroke();
+
+      // Pair of wooden chopsticks
+      ctx.strokeStyle = '#8B5E34';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(cx - 20, cy - 35);
+      ctx.lineTo(cx + 35, cy + 10);
+      ctx.moveTo(cx - 10, cy - 35);
+      ctx.lineTo(cx + 42, cy + 12);
+      ctx.stroke();
+
+      // Bowl smiley face
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      ctx.arc(cx - 10, cy + 12, 3, 0, Math.PI * 2);
+      ctx.arc(cx + 10, cy + 12, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy + 16, 5, 0, Math.PI);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawBlowingWindCloud(ctx, cx, cy) {
+      ctx.save();
+      // Cute fluffy blue cloud
+      ctx.fillStyle = '#A8DADC';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+      ctx.arc(cx - 12, cy + 4, 10, 0, Math.PI * 2);
+      ctx.arc(cx + 12, cy + 4, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#1D3557';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Wind gust trail
+      ctx.strokeStyle = '#457B9D';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx - 25, cy + 6);
+      ctx.lineTo(cx - 45, cy + 6);
+      ctx.moveTo(cx - 22, cy + 14);
+      ctx.lineTo(cx - 38, cy + 14);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 3. Sweet Lychee Theme (EXCLUSIVELY LYCHEE: NO STRAWBERRY!)
+    // Rendered with bumpy red peel, green leafy branch, and succulent translucent white pulp!
+    function drawLycheeFrame(ctx, w, h) {
+      ctx.save();
+      // Scalloped / Dot playful border in Lychee Red & Cream
+      ctx.lineWidth = 14;
+      ctx.strokeStyle = '#D62246';
+      ctx.strokeRect(7, 7, w - 14, h - 14);
+
+      // Top corner hanging fresh lychee cluster with leaves
+      drawLycheeCluster(ctx, 50, 48);
+      drawLycheeCluster(ctx, w - 50, 48);
+
+      // Bottom banner area
+      const bannerHeight = 85;
+      ctx.fillStyle = '#FFE5EC';
+      ctx.fillRect(0, h - bannerHeight, w, bannerHeight);
+      ctx.strokeStyle = '#D62246';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(0, h - bannerHeight, w, bannerHeight);
+
+      // Centerpiece: Peeled cute Lychee mascot showing pearl-white pulp
+      drawPeeledLycheeMascot(ctx, 60, h - 42);
+
+      // Typography
+      ctx.fillStyle = '#9B111E';
+      ctx.font = 'bold 22px "Zen Maru Gothic", cursive';
+      ctx.textAlign = 'left';
+      ctx.fillText('鮮甜玉荷包荔枝 🍒', 125, h - 45);
+
+      ctx.fillStyle = '#D62246';
+      ctx.font = 'bold 12px "Fredoka", sans-serif';
+      ctx.fillText('SWEET & JUICY TAIWAN LYCHEE ‧ 甜如初戀', 127, h - 22);
+
+      // Delicate leaf on right
+      drawLycheeLeaf(ctx, w - 50, h - 45, 0.4);
+
+      ctx.restore();
+    }
+
+    // Cluster of 2 round bumpy textured lychees with leaves
+    function drawLycheeCluster(ctx, cx, cy) {
+      ctx.save();
+      // Green stem
+      ctx.strokeStyle = '#588157';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - 25);
+      ctx.lineTo(cx - 10, cy);
+      ctx.moveTo(cx, cy - 25);
+      ctx.lineTo(cx + 12, cy + 2);
+      ctx.stroke();
+
+      // Leaves
+      drawLycheeLeaf(ctx, cx + 8, cy - 20, 0.7);
+
+      // Lychee 1 (bumpy crimson fruit)
+      drawSingleLycheeFruit(ctx, cx - 10, cy + 8, 14);
+      // Lychee 2
+      drawSingleLycheeFruit(ctx, cx + 14, cy + 10, 13);
+      ctx.restore();
+    }
+
+    function drawSingleLycheeFruit(ctx, x, y, r) {
+      ctx.save();
+      // Base bumpy red shell
+      ctx.fillStyle = '#D62246';
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#7D0A23';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Lychee bumpy shell texture spots (not strawberry seeds!)
+      ctx.fillStyle = '#9B111E';
+      for (let i = 0; i < 5; i++) {
+        const ang = (i * Math.PI * 2) / 5;
+        const dist = r * 0.55;
+        ctx.beginPath();
+        ctx.arc(x + Math.cos(ang) * dist, y + Math.sin(ang) * dist, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawLycheeLeaf(ctx, x, y, scale = 1) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(scale, scale);
+      ctx.fillStyle = '#3A5A40';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 18, 7, Math.PI / 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#2B2D42';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawPeeledLycheeMascot(ctx, cx, cy) {
+      ctx.save();
+      // Outer cracked crimson peel hanging open
+      ctx.fillStyle = '#C1121F';
+      ctx.beginPath();
+      ctx.arc(cx, cy + 6, 26, 0, Math.PI);
+      ctx.fill();
+      ctx.strokeStyle = '#780000';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Translucent pearl-white juicy pulp
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      ctx.arc(cx, cy - 2, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#FAD2E1';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Shiny eye highlights & cute smile
+      ctx.fillStyle = '#2B2D42';
+      ctx.beginPath();
+      ctx.arc(cx - 7, cy - 3, 3, 0, Math.PI * 2);
+      ctx.arc(cx + 7, cy - 3, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Cheeks
+      ctx.fillStyle = '#FFB5A7';
+      ctx.beginPath();
+      ctx.arc(cx - 12, cy + 3, 3.5, 0, Math.PI * 2);
+      ctx.arc(cx + 12, cy + 3, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Mouth
+      ctx.strokeStyle = '#2B2D42';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy + 2, 4.5, 0.1, Math.PI - 0.1);
+      ctx.stroke();
+
+      // Tiny green leaf atop head
+      drawLycheeLeaf(ctx, cx, cy - 24, 0.6);
+      ctx.restore();
+    }
+
+    // 4. Lucky Pineapple Theme
+    function drawPineappleFrame(ctx, w, h) {
+      ctx.save();
+      // Sun-gold border with diamond pattern
+      ctx.lineWidth = 14;
+      ctx.strokeStyle = '#FFB703';
+      ctx.strokeRect(7, 7, w - 14, h - 14);
+
+      // Top corner mini suns
+      drawCuteSun(ctx, 42, 42);
+      drawCuteSun(ctx, w - 42, 42);
+
+      // Bottom banner area
+      const bannerHeight = 85;
+      ctx.fillStyle = '#FEF9E7';
+      ctx.fillRect(0, h - bannerHeight, w, bannerHeight);
+      ctx.strokeStyle = '#FB8500';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(0, h - bannerHeight, w, bannerHeight);
+
+      // Cool sunglasses pineapple mascot
+      drawCoolPineappleMascot(ctx, 60, h - 42);
+
+      // Typography
+      ctx.fillStyle = '#D48B00';
+      ctx.font = 'bold 22px "Zen Maru Gothic", cursive';
+      ctx.textAlign = 'left';
+      ctx.fillText('旺旺好運大鳳梨 🍍', 125, h - 45);
+
+      ctx.fillStyle = '#FB8500';
+      ctx.font = 'bold 12px "Fredoka", sans-serif';
+      ctx.fillText('LUCKY PINEAPPLE ‧ 招財旺來好福氣', 127, h - 22);
+
+      // Cute golden pineapple slice ring at bottom right
+      drawPineappleSliceRing(ctx, w - 45, h - 42);
+
+      ctx.restore();
+    }
+
+    function drawCuteSun(ctx, cx, cy) {
+      ctx.save();
+      ctx.fillStyle = '#FFB703';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#FB8500';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Rays
+      ctx.strokeStyle = '#FB8500';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      for (let i = 0; i < 8; i++) {
+        const ang = (i * Math.PI) / 4;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(ang) * 17, cy + Math.sin(ang) * 17);
+        ctx.lineTo(cx + Math.cos(ang) * 24, cy + Math.sin(ang) * 24);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawCoolPineappleMascot(ctx, cx, cy) {
+      ctx.save();
+      // Green spiky crown leaves on top
+      ctx.fillStyle = '#2A9D8F';
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - 42);
+      ctx.lineTo(cx - 14, cy - 20);
+      ctx.lineTo(cx - 6, cy - 20);
+      ctx.lineTo(cx - 20, cy - 10);
+      ctx.lineTo(cx, cy - 14);
+      ctx.lineTo(cx + 20, cy - 10);
+      ctx.lineTo(cx + 6, cy - 20);
+      ctx.lineTo(cx + 14, cy - 20);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#2B2D42';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Golden Oval Pineapple Body
+      ctx.fillStyle = '#FFB703';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + 4, 22, 28, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#FB8500';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Diamond lattice lines
+      ctx.strokeStyle = '#F77F00';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx - 16, cy - 10); ctx.lineTo(cx + 16, cy + 18);
+      ctx.moveTo(cx - 20, cy + 2); ctx.lineTo(cx + 12, cy + 28);
+      ctx.moveTo(cx + 16, cy - 10); ctx.lineTo(cx - 16, cy + 18);
+      ctx.moveTo(cx + 20, cy + 2); ctx.lineTo(cx - 12, cy + 28);
+      ctx.stroke();
+
+      // Cool black sunglasses
+      ctx.fillStyle = '#2B2D42';
+      ctx.beginPath();
+      ctx.roundRect(cx - 16, cy - 4, 13, 10, 3);
+      ctx.roundRect(cx + 3, cy - 4, 13, 10, 3);
+      ctx.fill();
+      // Bridge
+      ctx.fillRect(cx - 4, cy - 2, 8, 3);
+
+      // Smiling mouth
+      ctx.strokeStyle = '#2B2D42';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy + 14, 6, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawPineappleSliceRing(ctx, cx, cy) {
+      ctx.save();
+      ctx.fillStyle = '#FFD166';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 20, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#FB8500';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Core hole
+      ctx.fillStyle = '#FEF9E7';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function renderLiveView() {
+      const cw = liveCanvas.width;
+      const ch = liveCanvas.height;
+
+      liveCtx.clearRect(0, 0, cw, ch);
+
+      // Apply camera mirror transform if enabled
+      liveCtx.save();
+      if (isMirror) {
+        liveCtx.translate(cw, 0);
+        liveCtx.scale(-1, 1);
+      }
+
+      // Draw camera video feed or mock canvas
+      if (!isMockMode && video.readyState >= 2) {
+        // Center-crop video to canvas aspect ratio
+        const vRatio = video.videoWidth / video.videoHeight;
+        const cRatio = cw / ch;
+        let sx, sy, sw, sh;
+        if (vRatio > cRatio) {
+          sh = video.videoHeight;
+          sw = sh * cRatio;
+          sx = (video.videoWidth - sw) / 2;
+          sy = 0;
+        } else {
+          sw = video.videoWidth;
+          sh = sw / cRatio;
+          sx = 0;
+          sy = (video.videoHeight - sh) / 2;
+        }
+        liveCtx.drawImage(video, sx, sy, sw, sh, 0, 0, cw, ch);
+      } else {
+        // Draw Mock animated fallback
+        drawMockVideoFrame(liveCtx, cw, ch);
+      }
+
+      liveCtx.restore();
+
+      // Apply color filter in real time
+      applyFilterToContext(liveCtx, cw, ch, currentFilter);
+
+      // Draw active selected theme border over live preview
+      switch (currentTheme) {
+        case 'nationalDay':
+          drawDoubleTenthFrame(liveCtx, cw, ch, true);
+          break;
+        case 'noodles':
+          drawNoodlesFrame(liveCtx, cw, ch);
+          break;
+        case 'lychee':
+          drawLycheeFrame(liveCtx, cw, ch);
+          break;
+        case 'pineapple':
+          drawPineappleFrame(liveCtx, cw, ch);
+          break;
+      }
+
+      requestAnimationFrame(renderLiveView);
+    }
+
+    function applyFilterToContext(ctx, w, h, filterName) {
+      if (filterName === 'normal') return;
+
+      const imgData = ctx.getImageData(0, 0, w, h);
+      const data = imgData.data;
+
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+
+        if (filterName === 'fairy') {
+          // Soft pink dreamy glow
+          data[i] = Math.min(255, r * 1.15 + 20);
+          data[i + 1] = Math.min(255, g * 1.02 + 10);
+          data[i + 2] = Math.min(255, b * 1.12 + 25);
+        } else if (filterName === 'vintage') {
+          // Warm golden hour sunset
+          data[i] = Math.min(255, r * 1.2 + 25);
+          data[i + 1] = Math.min(255, g * 1.05 + 10);
+          data[i + 2] = Math.max(0, b * 0.85);
+        } else if (filterName === 'bw') {
+          // High contrast black & white
+          const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+          data[i] = gray;
+          data[i + 1] = gray;
+          data[i + 2] = gray;
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+    }
+
+    async function triggerCaptureSequence() {
+      if (isCountingDown) return;
+      isCountingDown = true;
+
+      const shutterBtn = document.getElementById('shutterBtn');
+      shutterBtn.disabled = true;
+      shutterBtn.classList.add('opacity-60', 'cursor-not-allowed');
+
+      capturedShots = [];
+
+      if (currentMode === 'single') {
+        await runSingleCountdownAndShoot(1, 1);
+      } else {
+        // 4-Cut Continuous Mode
+        document.getElementById('stripProgressContainer').classList.remove('hidden');
+        resetStripProgressBars();
+
+        for (let shotIndex = 1; shotIndex <= 4; shotIndex++) {
+          updateStripProgressBar(shotIndex);
+          await runSingleCountdownAndShoot(shotIndex, 4);
+          if (shotIndex < 4) {
+            // Short 1.8s breath window before next shot
+            await new Promise(r => setTimeout(r, 1400));
+          }
+        }
+        document.getElementById('stripProgressContainer').classList.add('hidden');
+      }
+
+      isCountingDown = false;
+      shutterBtn.disabled = false;
+      shutterBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+
+      // Transition to Studio workspace
+      buildStudioComposite();
+      document.getElementById('studioContainer').classList.remove('hidden');
+      document.getElementById('studioContainer').scrollIntoView({ behavior: 'smooth' });
+      showToast("拍貼已完成！快來挑選貼圖或手寫簽名吧！", "🎉");
+    }
+
+    function runSingleCountdownAndShoot(current, total) {
+      return new Promise((resolve) => {
+        let count = countdownDuration;
+        const countdownBadge = document.getElementById('countdownBadge');
+        const countdownNumber = document.getElementById('countdownNumber');
+        countdownBadge.classList.remove('hidden');
+        countdownNumber.textContent = count;
+        playBeep(450, 0.15);
+
+        const timerInterval = setInterval(() => {
+          count--;
+          if (count > 0) {
+            countdownNumber.textContent = count;
+            playBeep(450, 0.15);
+          } else {
+            clearInterval(timerInterval);
+            countdownBadge.classList.add('hidden');
+            
+            // FLASH & SOUND
+            triggerFlashAnimation();
+            playShutterSound();
+
+            // GRAB PHOTO FRAME FROM LIVE CANVAS (RAW PHOTO WITHOUT FRAME)
+            const shotCanvas = document.createElement('canvas');
+            shotCanvas.width = liveCanvas.width;
+            shotCanvas.height = liveCanvas.height;
+            const sCtx = shotCanvas.getContext('2d');
+
+            // Draw clean photo without frame overlays
+            sCtx.save();
+            if (isMirror) {
+              sCtx.translate(shotCanvas.width, 0);
+              sCtx.scale(-1, 1);
+            }
+            if (!isMockMode && video.readyState >= 2) {
+              const vRatio = video.videoWidth / video.videoHeight;
+              const cRatio = shotCanvas.width / shotCanvas.height;
+              let sx, sy, sw, sh;
+              if (vRatio > cRatio) {
+                sh = video.videoHeight;
+                sw = sh * cRatio;
+                sx = (video.videoWidth - sw) / 2;
+                sy = 0;
+              } else {
+                sw = video.videoWidth;
+                sh = sw / cRatio;
+                sx = 0;
+                sy = (video.videoHeight - sh) / 2;
+              }
+              sCtx.drawImage(video, sx, sy, sw, sh, 0, 0, shotCanvas.width, shotCanvas.height);
+            } else {
+              drawMockVideoFrame(sCtx, shotCanvas.width, shotCanvas.height);
+            }
+            sCtx.restore();
+
+            // Apply active filter to raw shot
+            applyFilterToContext(sCtx, shotCanvas.width, shotCanvas.height, currentFilter);
+
+            capturedShots.push(shotCanvas);
+            resolve();
+          }
+        }, 1000);
+      });
+    }
+
+    function triggerFlashAnimation() {
+      const flash = document.getElementById('flashOverlay');
+      flash.style.opacity = '0.9';
+      setTimeout(() => {
+        flash.style.opacity = '0';
+      }, 250);
+    }
+
+    function resetStripProgressBars() {
+      for (let i = 1; i <= 4; i++) {
+        const bar = document.getElementById(`shotBar${i}`);
+        bar.className = 'h-2.5 rounded-full bg-slate-200 border-2 border-slate-800';
+      }
+    }
+
+    function updateStripProgressBar(idx) {
+      document.getElementById('stripCountText').textContent = `第 ${idx} / 4 張`;
+      for (let i = 1; i <= 4; i++) {
+        const bar = document.getElementById(`shotBar${i}`);
+        if (i < idx) {
+          bar.className = 'h-2.5 rounded-full bg-green-500 border-2 border-slate-800';
+        } else if (i === idx) {
+          bar.className = 'h-2.5 rounded-full bg-twPineapple border-2 border-slate-800 animate-pulse';
+        } else {
+          bar.className = 'h-2.5 rounded-full bg-slate-200 border-2 border-slate-800';
+        }
+      }
+    }
+
+    function buildStudioComposite() {
+      if (capturedShots.length === 0) return;
+
+      if (currentMode === 'single') {
+        // Single Polaroid Frame Format (480 x 640)
+        studioCanvas.width = 480;
+        studioCanvas.height = 640;
+        renderSingleLayout();
+      } else {
+        // Korean 4-Cut Strip Format (400 x 1150)
+        studioCanvas.width = 420;
+        studioCanvas.height = 1200;
+        renderStripLayout();
+      }
+
+      // Re-render draggable stickers & doodles on top
+      drawDoodlesOnStudio();
+      drawStickersOnStudio();
+    }
+
+    function renderSingleLayout() {
+      const w = studioCanvas.width;
+      const h = studioCanvas.height;
+
+      // Draw photo
+      const photo = capturedShots[0];
+      studioCtx.drawImage(photo, 0, 0, w, h);
+
+      // Draw Theme Border Overlay
+      drawCurrentThemeFrame(studioCtx, w, h);
+
+      // Draw optional date and caption stamp
+      drawFooterStamps(studioCtx, w, h);
+    }
+
+    function renderStripLayout() {
+      const w = studioCanvas.width;
+      const h = studioCanvas.height;
+
+      // Theme background for strip
+      let stripBg = '#FFFFFF';
+      let borderStroke = '#2B2D42';
+      if (currentTheme === 'nationalDay') stripBg = '#1D3557';
+      else if (currentTheme === 'noodles') stripBg = '#F7EDE2';
+      else if (currentTheme === 'lychee') stripBg = '#FFF0F3';
+      else if (currentTheme === 'pineapple') stripBg = '#FEF9E7';
+
+      studioCtx.fillStyle = stripBg;
+      studioCtx.fillRect(0, 0, w, h);
+
+      // Frame Border
+      studioCtx.lineWidth = 14;
+      studioCtx.strokeStyle = borderStroke;
+      studioCtx.strokeRect(7, 7, w - 14, h - 14);
+
+      // Draw 4 photos vertically
+      const marginX = 24;
+      const photoW = w - marginX * 2;
+      const photoH = 220;
+      const startY = 32;
+      const gapY = 16;
+
+      for (let i = 0; i < 4; i++) {
+        const py = startY + i * (photoH + gapY);
+        // Photo shadow / border
+        studioCtx.fillStyle = '#2B2D42';
+        studioCtx.fillRect(marginX + 4, py + 4, photoW, photoH);
+
+        if (capturedShots[i]) {
+          studioCtx.drawImage(capturedShots[i], marginX, py, photoW, photoH);
+        }
+        studioCtx.lineWidth = 3.5;
+        studioCtx.strokeStyle = '#2B2D42';
+        studioCtx.strokeRect(marginX, py, photoW, photoH);
+      }
+
+      // Bottom Area for Strip Logo & Accents
+      const footerY = startY + 4 * (photoH + gapY) + 10;
+      drawStripThemeFooter(studioCtx, w, footerY);
+    }
+
+    function drawCurrentThemeFrame(ctx, w, h) {
+      switch (currentTheme) {
+        case 'nationalDay':
+          drawDoubleTenthFrame(ctx, w, h);
+          break;
+        case 'noodles':
+          drawNoodlesFrame(ctx, w, h);
+          break;
+        case 'lychee':
+          drawLycheeFrame(ctx, w, h);
+          break;
+        case 'pineapple':
+          drawPineappleFrame(ctx, w, h);
+          break;
+      }
+    }
+
+    function drawStripThemeFooter(ctx, w, startY) {
+      ctx.save();
+      // Theme specific mascot on footer
+      if (currentTheme === 'nationalDay') {
+        drawDoubleTenthMascot(ctx, 60, startY + 45);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 20px "Zen Maru Gothic", cursive';
+        ctx.fillText('台灣雙十 ‧ 快樂紀念 🇹🇼', 110, startY + 40);
+        ctx.fillStyle = '#FFB703';
+        ctx.font = 'bold 12px "Fredoka", sans-serif';
+        ctx.fillText('DOUBLE TENTH 4-CUT MEMORIES', 112, startY + 65);
+      } else if (currentTheme === 'noodles') {
+        drawRiceNoodleBowl(ctx, 60, startY + 45);
+        ctx.fillStyle = '#603813';
+        ctx.font = 'bold 20px "Zen Maru Gothic", cursive';
+        ctx.fillText('芬園Q彈米粉 🍜', 110, startY + 40);
+        ctx.fillStyle = '#BC6C25';
+        ctx.font = 'bold 12px "Fredoka", sans-serif';
+        ctx.fillText('FENYUAN RICE NOODLE STRIP', 112, startY + 65);
+      } else if (currentTheme === 'lychee') {
+        drawPeeledLycheeMascot(ctx, 60, startY + 45);
+        ctx.fillStyle = '#D62246';
+        ctx.font = 'bold 20px "Zen Maru Gothic", cursive';
+        ctx.fillText('甜蜜多汁鮮荔枝 🍒', 110, startY + 40);
+        ctx.fillStyle = '#9B111E';
+        ctx.font = 'bold 12px "Fredoka", sans-serif';
+        ctx.fillText('SWEET LYCHEE SUMMER VIBE', 112, startY + 65);
+      } else if (currentTheme === 'pineapple') {
+        drawCoolPineappleMascot(ctx, 60, startY + 45);
+        ctx.fillStyle = '#D48B00';
+        ctx.font = 'bold 20px "Zen Maru Gothic", cursive';
+        ctx.fillText('旺旺好運大鳳梨 🍍', 110, startY + 40);
+        ctx.fillStyle = '#FB8500';
+        ctx.font = 'bold 12px "Fredoka", sans-serif';
+        ctx.fillText('GOOD LUCK & PROSPERITY', 112, startY + 65);
+      }
+
+      // Date stamp
+      if (dateStampEnabled) {
+        const today = new Date();
+        const dateStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
+        ctx.fillStyle = currentTheme === 'nationalDay' ? '#FFD166' : '#6D6875';
+        ctx.font = 'bold 11px "Fredoka", sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(dateStr, w - 24, startY + 80);
+      }
+      ctx.restore();
+    }
+
+    function drawFooterStamps(ctx, w, h) {
+      if (!dateStampEnabled && !customCaption) return;
+
+      ctx.save();
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
+
+      ctx.textAlign = 'right';
+      ctx.font = 'bold 12px "Fredoka", sans-serif';
+      ctx.fillStyle = (currentTheme === 'nationalDay') ? '#FFE494' : '#2B2D42';
+
+      if (dateStampEnabled) {
+        ctx.fillText(`DATE: ${dateStr}`, w - 30, h - 35);
+      }
+      if (customCaption) {
+        ctx.fillText(customCaption, w - 30, h - 18);
+      }
+      ctx.restore();
+    }
+
+    const stickerIcons = {
+      flag: '🇹🇼',
+      lychee: '🍒',
+      pineapple: '🍍',
+      noodle: '🍜',
+      sunglasses: '🕶️',
+      heart: '💖',
+      star: '⭐',
+      sparkles: '✨',
+      boba: '🧋',
+      crown: '👑'
+    };
+
+    function addSticker(type) {
+      const icon = stickerIcons[type] || '✨';
+      const newSticker = {
+        id: Date.now(),
+        icon: icon,
+        x: studioCanvas.width / 2 + (Math.random() * 60 - 30),
+        y: studioCanvas.height / 2 + (Math.random() * 60 - 30),
+        size: 54
+      };
+      stickersOnCanvas.push(newSticker);
+      buildStudioComposite();
+      showToast(`已貼上貼圖 ${icon}！可直接用滑鼠拖曳擺放`, "🧸");
+    }
+
+    function drawStickersOnStudio() {
+      studioCtx.save();
+      for (const st of stickersOnCanvas) {
+        studioCtx.font = `${st.size}px "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
+        studioCtx.textAlign = 'center';
+        studioCtx.textBaseline = 'middle';
+        studioCtx.shadowColor = 'rgba(0,0,0,0.3)';
+        studioCtx.shadowBlur = 6;
+        studioCtx.shadowOffsetX = 3;
+        studioCtx.shadowOffsetY = 3;
+        studioCtx.fillText(st.icon, st.x, st.y);
+      }
+      studioCtx.restore();
+    }
+
+    function drawDoodlesOnStudio() {
+      studioCtx.save();
+      studioCtx.lineCap = 'round';
+      studioCtx.lineJoin = 'round';
+
+      for (const path of doodlePaths) {
+        if (!path.points || path.points.length < 2) continue;
+        studioCtx.strokeStyle = path.color;
+        studioCtx.lineWidth = path.size;
+        studioCtx.beginPath();
+        studioCtx.moveTo(path.points[0].x, path.points[0].y);
+        for (let i = 1; i < path.points.length; i++) {
+          studioCtx.lineTo(path.points[i].x, path.points[i].y);
+        }
+        studioCtx.stroke();
+      }
+      studioCtx.restore();
+    }
+
+    // Canvas Mouse / Touch events for Stickers Dragging & Drawing
+    function getCanvasCoords(e) {
+      const rect = studioCanvas.getBoundingClientRect();
+      const scaleX = studioCanvas.width / rect.width;
+      const scaleY = studioCanvas.height / rect.height;
+
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY
+      };
+    }
+
+    function onPointerDown(e) {
+      const pos = getCanvasCoords(e);
+
+      if (activeToolTab === 'sticker') {
+        // Check if clicked near an existing sticker to drag it
+        for (let i = stickersOnCanvas.length - 1; i >= 0; i--) {
+          const st = stickersOnCanvas[i];
+          const dist = Math.hypot(pos.x - st.x, pos.y - st.y);
+          if (dist < st.size * 0.7) {
+            draggingSticker = st;
+            dragOffset.x = pos.x - st.x;
+            dragOffset.y = pos.y - st.y;
+            return;
+          }
+        }
+      } else {
+        // Doodle mode
+        isDrawing = true;
+        currentDoodlePath = {
+          color: currentBrushColor,
+          size: currentBrushSize,
+          points: [pos]
+        };
+        doodlePaths.push(currentDoodlePath);
+      }
+    }
+
+    function onPointerMove(e) {
+      const pos = getCanvasCoords(e);
+
+      if (draggingSticker && activeToolTab === 'sticker') {
+        draggingSticker.x = pos.x - dragOffset.x;
+        draggingSticker.y = pos.y - dragOffset.y;
+        buildStudioComposite();
+      } else if (isDrawing && activeToolTab === 'doodle') {
+        currentDoodlePath.points.push(pos);
+        buildStudioComposite();
+      }
+    }
+
+    function onPointerUp() {
+      draggingSticker = null;
+      isDrawing = false;
+    }
+
+    function downloadPhotoBoothPNG(showModalOnMobile = true) {
+      try {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `TaiwanFun-Fenyuan-${timestamp}.png`;
+        const dataUrl = studioCanvas.toDataURL('image/png');
+
+        // Update modal image source for preview / mobile long-press
+        const modalImg = document.getElementById('modalResultImage');
+        if (modalImg) modalImg.src = dataUrl;
+
+        // Modern Blob download trigger
+        if (studioCanvas.toBlob) {
+          studioCanvas.toBlob((blob) => {
+            if (!blob) {
+              triggerFallbackDownload(dataUrl, filename);
+              return;
+            }
+            const blobUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = blobUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+            showToast("拍貼照片下載成功！歡迎分享！", "🎉");
+          }, 'image/png');
+        } else {
+          triggerFallbackDownload(dataUrl, filename);
+        }
+
+        // On touch devices or if user clicks preview, show the modal as double guarantee
+        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        if (showModalOnMobile && isTouchDevice) {
+          openSaveModal();
+        }
+      } catch (err) {
+        console.error('Download error:', err);
+        openSaveModal();
+        showToast("已為您開啟大圖預覽，可長按或右鍵另存圖片！", "💡");
+      }
+    }
+
+    function triggerFallbackDownload(dataUrl, filename) {
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("拍貼照片下載成功！", "🎉");
+    }
+
+    function openSaveModal() {
+      const modal = document.getElementById('saveModal');
+      const modalImg = document.getElementById('modalResultImage');
+      modalImg.src = studioCanvas.toDataURL('image/png');
+      modal.classList.remove('hidden');
+    }
+
+    function closeSaveModal() {
+      document.getElementById('saveModal').classList.add('hidden');
+    }
+
+    window.addEventListener('load', () => {
+      // Start live canvas loop
+      renderLiveView();
+
+      // Start Camera Button
+      document.getElementById('startCamBtn').addEventListener('click', startCamera);
+      document.getElementById('mockCamBtn').addEventListener('click', startMockMode);
+
+      // Shutter Trigger
+      document.getElementById('shutterBtn').addEventListener('click', triggerCaptureSequence);
+
+      // Mode Switch: Single vs Strip
+      const singleBtn = document.getElementById('modeSingleBtn');
+      const stripBtn = document.getElementById('modeStripBtn');
+
+      singleBtn.addEventListener('click', () => {
+        currentMode = 'single';
+        singleBtn.classList.add('bg-twCream', 'border-twRed');
+        singleBtn.querySelector('.mode-check').classList.remove('hidden');
+        stripBtn.classList.remove('bg-twCream', 'border-twRed');
+        stripBtn.querySelector('.mode-check').classList.add('hidden');
+        document.getElementById('shutterText').textContent = '拍照 (單張拍立得)';
+        if (capturedShots.length > 0) buildStudioComposite();
+      });
+
+      stripBtn.addEventListener('click', () => {
+        currentMode = 'strip';
+        stripBtn.classList.add('bg-twCream', 'border-twRed');
+        stripBtn.querySelector('.mode-check').classList.remove('hidden');
+        singleBtn.classList.remove('bg-twCream', 'border-twRed');
+        singleBtn.querySelector('.mode-check').classList.add('hidden');
+        document.getElementById('shutterText').textContent = '開始 4 連拍！';
+        if (capturedShots.length > 0) buildStudioComposite();
+      });
+
+      // 4 Themes Selection Cards
+      const themeCards = document.querySelectorAll('.theme-card');
+      themeCards.forEach(card => {
+        card.addEventListener('click', () => {
+          themeCards.forEach(c => c.classList.remove('ring-4', 'ring-twRed'));
+          card.classList.add('ring-4', 'ring-twRed');
+          currentTheme = card.dataset.theme;
+          if (capturedShots.length > 0) buildStudioComposite();
+          showToast(`已切換至「${card.querySelector('.font-black').textContent}」主題！`, "🎨");
+        });
+      });
+
+      // Mirror toggle
+      const mirrorBtn = document.getElementById('toggleMirrorBtn');
+      mirrorBtn.addEventListener('click', () => {
+        isMirror = !isMirror;
+        document.getElementById('mirrorStateText').textContent = isMirror ? '開啟' : '關閉';
+      });
+
+      // Countdown duration selection
+      const t3Btn = document.getElementById('timer3sBtn');
+      const t5Btn = document.getElementById('timer5sBtn');
+      t3Btn.addEventListener('click', () => {
+        countdownDuration = 3;
+        t3Btn.className = 'timer-btn cartoon-btn px-2.5 py-1 bg-twPineapple font-black rounded-md';
+        t5Btn.className = 'timer-btn cartoon-btn px-2.5 py-1 bg-white font-bold rounded-md';
+      });
+      t5Btn.addEventListener('click', () => {
+        countdownDuration = 5;
+        t5Btn.className = 'timer-btn cartoon-btn px-2.5 py-1 bg-twPineapple font-black rounded-md';
+        t3Btn.className = 'timer-btn cartoon-btn px-2.5 py-1 bg-white font-bold rounded-md';
+      });
+
+      // Filter buttons
+      const filterBtns = document.querySelectorAll('.filter-btn');
+      filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          filterBtns.forEach(b => {
+            b.classList.remove('bg-twCream', 'border-twRed', 'ring-2', 'ring-twRed');
+            b.classList.add('bg-white');
+          });
+          btn.classList.add('bg-twCream', 'border-twRed', 'ring-2', 'ring-twRed');
+          currentFilter = btn.dataset.filter;
+        });
+      });
+
+      // Date Stamp & Caption inputs
+      const dateCheckbox = document.getElementById('dateStampCheckbox');
+      dateCheckbox.addEventListener('change', (e) => {
+        dateStampEnabled = e.target.checked;
+        if (capturedShots.length > 0) buildStudioComposite();
+      });
+
+      const captionInput = document.getElementById('customTextCaption');
+      captionInput.addEventListener('input', (e) => {
+        customCaption = e.target.value.trim();
+        if (capturedShots.length > 0) buildStudioComposite();
+      });
+
+      // Studio Tabs: Sticker vs Doodle
+      const tabSticker = document.getElementById('tabStickerBtn');
+      const tabDoodle = document.getElementById('tabDoodleBtn');
+      const traySticker = document.getElementById('stickersTray');
+      const trayDoodle = document.getElementById('doodleTray');
+
+      tabSticker.addEventListener('click', () => {
+        activeToolTab = 'sticker';
+        tabSticker.className = 'flex-1 cartoon-btn py-2 bg-twPineapple font-black text-xs rounded-xl';
+        tabDoodle.className = 'flex-1 cartoon-btn py-2 bg-white text-slate-700 font-bold text-xs rounded-xl';
+        traySticker.classList.remove('hidden');
+        trayDoodle.classList.add('hidden');
+      });
+
+      tabDoodle.addEventListener('click', () => {
+        activeToolTab = 'doodle';
+        tabDoodle.className = 'flex-1 cartoon-btn py-2 bg-twPineapple font-black text-xs rounded-xl';
+        tabSticker.className = 'flex-1 cartoon-btn py-2 bg-white text-slate-700 font-bold text-xs rounded-xl';
+        trayDoodle.classList.remove('hidden');
+        traySticker.classList.add('hidden');
+      });
+
+      // Sticker add buttons
+      document.querySelectorAll('.sticker-add-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          addSticker(btn.dataset.sticker);
+        });
+      });
+
+      document.getElementById('clearStickersBtn').addEventListener('click', () => {
+        stickersOnCanvas = [];
+        buildStudioComposite();
+        showToast("已清空所有貼圖", "🧹");
+      });
+
+      // Doodle color buttons
+      document.querySelectorAll('.brush-color-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentBrushColor = btn.dataset.color;
+          showToast(`筆刷顏色已切換！`, "✏️");
+        });
+      });
+
+      document.getElementById('brushSize').addEventListener('input', (e) => {
+        currentBrushSize = parseInt(e.target.value, 10);
+      });
+
+      document.getElementById('clearDoodleBtn').addEventListener('click', () => {
+        doodlePaths = [];
+        buildStudioComposite();
+        showToast("已清除手繪塗鴉筆跡", "🧹");
+      });
+
+      // Studio Pointer / Touch interactions
+      studioCanvas.addEventListener('mousedown', onPointerDown);
+      studioCanvas.addEventListener('mousemove', onPointerMove);
+      window.addEventListener('mouseup', onPointerUp);
+
+      studioCanvas.addEventListener('touchstart', onPointerDown, { passive: false });
+      studioCanvas.addEventListener('touchmove', onPointerMove, { passive: false });
+      window.addEventListener('touchend', onPointerUp);
+
+      // Download and Retake
+      document.getElementById('downloadBtn').addEventListener('click', () => downloadPhotoBoothPNG(false));
+      document.getElementById('previewModalBtn').addEventListener('click', openSaveModal);
+      document.getElementById('closeModalBtn').addEventListener('click', closeSaveModal);
+      document.getElementById('modalCloseBtn2').addEventListener('click', closeSaveModal);
+      document.getElementById('modalDirectDownloadBtn').addEventListener('click', () => downloadPhotoBoothPNG(false));
+
+      document.getElementById('retakeBtn').addEventListener('click', () => {
+        document.getElementById('studioContainer').classList.add('hidden');
+        capturedShots = [];
+        stickersOnCanvas = [];
+        doodlePaths = [];
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showToast("已重置，準備拍攝新照片！", "📸");
+      });
+    });
+  </script>
+</body>
+</html>
