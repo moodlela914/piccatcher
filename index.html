@@ -164,7 +164,7 @@
         <!-- 4-Shot Progress bar indicator (for 4-cut mode) -->
         <div id="stripProgressContainer" class="hidden w-full mt-3 px-1">
           <div class="flex justify-between text-xs font-bold text-slate-700 mb-1">
-            <span>四格連拍進度</span>
+            <span>2×2 四格連拍進度</span>
             <span id="stripCountText">第 1 / 4 張</span>
           </div>
           <div class="grid grid-cols-4 gap-2">
@@ -310,16 +310,16 @@
             <div class="mode-check absolute top-2 right-2 text-xs bg-twRed text-white rounded-full w-5 h-5 flex items-center justify-center font-bold">✓</div>
           </button>
 
-          <!-- 4-Cut Strip Button -->
+          <!-- 2x2 Grid Button -->
           <button id="modeStripBtn" class="mode-select-btn cartoon-btn p-3 bg-white border-slate-800 flex flex-col items-center gap-2 rounded-2xl text-left relative overflow-hidden group">
-            <div class="w-10 h-16 bg-white border-2 border-slate-800 rounded shadow-sm flex flex-col items-center justify-between p-1">
-              <div class="w-full h-2.5 bg-blue-100 rounded-xs"></div>
-              <div class="w-full h-2.5 bg-rose-100 rounded-xs"></div>
-              <div class="w-full h-2.5 bg-yellow-100 rounded-xs"></div>
-              <div class="w-full h-2.5 bg-emerald-100 rounded-xs"></div>
+            <div class="w-12 h-14 bg-white border-2 border-slate-800 rounded shadow-sm grid grid-cols-2 gap-1 p-1">
+              <div class="w-full h-5 bg-blue-100 rounded-xs"></div>
+              <div class="w-full h-5 bg-rose-100 rounded-xs"></div>
+              <div class="w-full h-5 bg-yellow-100 rounded-xs"></div>
+              <div class="w-full h-5 bg-emerald-100 rounded-xs"></div>
             </div>
-            <span class="font-black text-sm text-slate-800">韓系人生四格條</span>
-            <span class="text-[11px] font-bold text-slate-500">自動連續 4 連拍</span>
+            <span class="font-black text-sm text-slate-800">經典 2×2 四格框</span>
+            <span class="text-[11px] font-bold text-slate-500">2×2 網格 ‧ 原比例 4 連拍</span>
             <div class="mode-check hidden absolute top-2 right-2 text-xs bg-twRed text-white rounded-full w-5 h-5 flex items-center justify-center font-bold">✓</div>
           </button>
         </div>
@@ -1428,10 +1428,10 @@
         studioCanvas.height = 640;
         renderSingleLayout();
       } else {
-        // Korean 4-Cut Strip Format (400 x 1150)
-        studioCanvas.width = 420;
-        studioCanvas.height = 1200;
-        renderStripLayout();
+        // 2x2 Grid Format (740 x 1060) - Perfectly maintains 3:4 aspect ratio for every photo
+        studioCanvas.width = 740;
+        studioCanvas.height = 1060;
+        renderGrid2x2Layout();
       }
 
       // Re-render draggable stickers & doodles on top
@@ -1454,11 +1454,11 @@
       drawFooterStamps(studioCtx, w, h);
     }
 
-    function renderStripLayout() {
+    function renderGrid2x2Layout() {
       const w = studioCanvas.width;
       const h = studioCanvas.height;
 
-      // Theme background for strip
+      // Theme background for 2x2 grid
       let stripBg = '#FFFFFF';
       let borderStroke = '#2B2D42';
       if (currentTheme === 'nationalDay') stripBg = '#1D3557';
@@ -1474,29 +1474,35 @@
       studioCtx.strokeStyle = borderStroke;
       studioCtx.strokeRect(7, 7, w - 14, h - 14);
 
-      // Draw 4 photos vertically
-      const marginX = 24;
-      const photoW = w - marginX * 2;
-      const photoH = 220;
-      const startY = 32;
-      const gapY = 16;
+      // 2x2 Photo dimensions: width 330, height 440 (exactly 3:4 aspect ratio, identical to 480x640)
+      const marginX = 30;
+      const gapX = 20;
+      const photoW = 330;
+      const photoH = 440;
+      const startY = 35;
+      const gapY = 20;
 
       for (let i = 0; i < 4; i++) {
-        const py = startY + i * (photoH + gapY);
-        // Photo shadow / border
+        const col = i % 2;
+        const row = Math.floor(i / 2);
+        const px = marginX + col * (photoW + gapX);
+        const py = startY + row * (photoH + gapY);
+
+        // Photo drop shadow
         studioCtx.fillStyle = '#2B2D42';
-        studioCtx.fillRect(marginX + 4, py + 4, photoW, photoH);
+        studioCtx.fillRect(px + 4, py + 4, photoW, photoH);
 
         if (capturedShots[i]) {
-          studioCtx.drawImage(capturedShots[i], marginX, py, photoW, photoH);
+          // Draw using full source to destination, 100% preserving original 3:4 ratio
+          studioCtx.drawImage(capturedShots[i], 0, 0, capturedShots[i].width, capturedShots[i].height, px, py, photoW, photoH);
         }
         studioCtx.lineWidth = 3.5;
         studioCtx.strokeStyle = '#2B2D42';
-        studioCtx.strokeRect(marginX, py, photoW, photoH);
+        studioCtx.strokeRect(px, py, photoW, photoH);
       }
 
-      // Bottom Area for Strip Logo & Accents
-      const footerY = startY + 4 * (photoH + gapY) + 10;
+      // Bottom Area for Strip/Grid Theme Footer
+      const footerY = startY + (photoH * 2 + gapY) + 12;
       drawStripThemeFooter(studioCtx, w, footerY);
     }
 
@@ -1519,50 +1525,66 @@
 
     function drawStripThemeFooter(ctx, w, startY) {
       ctx.save();
-      // Theme specific mascot on footer
+      const centerY = startY + 48;
+
+      // Theme specific mascot & titles on wide footer
       if (currentTheme === 'nationalDay') {
-        drawDoubleTenthMascot(ctx, 60, startY + 45);
+        drawDoubleTenthMascot(ctx, 60, centerY);
         ctx.fillStyle = '#FFFFFF';
-        ctx.font = 'bold 20px "Zen Maru Gothic", cursive';
-        ctx.fillText('台灣雙十 ‧ 快樂紀念 🇹🇼', 110, startY + 40);
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 24px "Zen Maru Gothic", cursive';
+        ctx.fillText('台灣雙十 ‧ 快樂紀念 🇹🇼', 105, centerY - 8);
         ctx.fillStyle = '#FFB703';
-        ctx.font = 'bold 12px "Fredoka", sans-serif';
-        ctx.fillText('DOUBLE TENTH 4-CUT MEMORIES', 112, startY + 65);
+        ctx.font = 'bold 13px "Fredoka", sans-serif';
+        ctx.fillText('DOUBLE TENTH 2×2 PHOTO MEMORIES', 107, centerY + 18);
+        drawTaiwanHeartBalloon(ctx, w - 170, centerY);
       } else if (currentTheme === 'noodles') {
-        drawRiceNoodleBowl(ctx, 60, startY + 45);
+        drawRiceNoodleBowl(ctx, 60, centerY);
         ctx.fillStyle = '#603813';
-        ctx.font = 'bold 20px "Zen Maru Gothic", cursive';
-        ctx.fillText('芬園Q彈米粉 🍜', 110, startY + 40);
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 24px "Zen Maru Gothic", cursive';
+        ctx.fillText('芬園Q彈米粉 🍜', 105, centerY - 8);
         ctx.fillStyle = '#BC6C25';
-        ctx.font = 'bold 12px "Fredoka", sans-serif';
-        ctx.fillText('FENYUAN RICE NOODLE STRIP', 112, startY + 65);
+        ctx.font = 'bold 13px "Fredoka", sans-serif';
+        ctx.fillText('FENYUAN RICE NOODLE 2×2 SPECIAL ‧ 芬園特產限定', 107, centerY + 18);
+        drawBlowingWindCloud(ctx, w - 170, centerY);
       } else if (currentTheme === 'lychee') {
-        drawPeeledLycheeMascot(ctx, 60, startY + 45);
+        drawPeeledLycheeMascot(ctx, 60, centerY);
         ctx.fillStyle = '#D62246';
-        ctx.font = 'bold 20px "Zen Maru Gothic", cursive';
-        ctx.fillText('甜蜜多汁鮮荔枝 🍒', 110, startY + 40);
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 24px "Zen Maru Gothic", cursive';
+        ctx.fillText('甜蜜多汁鮮荔枝 🍒', 105, centerY - 8);
         ctx.fillStyle = '#9B111E';
-        ctx.font = 'bold 12px "Fredoka", sans-serif';
-        ctx.fillText('SWEET LYCHEE SUMMER VIBE', 112, startY + 65);
+        ctx.font = 'bold 13px "Fredoka", sans-serif';
+        ctx.fillText('SWEET LYCHEE SUMMER VIBE ‧ 鮮採玉荷包', 107, centerY + 18);
+        drawLycheeCluster(ctx, w - 170, centerY - 6);
       } else if (currentTheme === 'pineapple') {
-        drawCoolPineappleMascot(ctx, 60, startY + 45);
+        drawCoolPineappleMascot(ctx, 60, centerY);
         ctx.fillStyle = '#D48B00';
-        ctx.font = 'bold 20px "Zen Maru Gothic", cursive';
-        ctx.fillText('旺旺好運大鳳梨 🍍', 110, startY + 40);
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 24px "Zen Maru Gothic", cursive';
+        ctx.fillText('旺旺好運大鳳梨 🍍', 105, centerY - 8);
         ctx.fillStyle = '#FB8500';
-        ctx.font = 'bold 12px "Fredoka", sans-serif';
-        ctx.fillText('GOOD LUCK & PROSPERITY', 112, startY + 65);
+        ctx.font = 'bold 13px "Fredoka", sans-serif';
+        ctx.fillText('LUCKY PINEAPPLE 2×2 ‧ 招財旺來好福氣', 107, centerY + 18);
+        drawPineappleSliceRing(ctx, w - 170, centerY);
       }
 
-      // Date stamp
+      // Date stamp & custom caption on right side
+      ctx.textAlign = 'right';
       if (dateStampEnabled) {
         const today = new Date();
         const dateStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
         ctx.fillStyle = currentTheme === 'nationalDay' ? '#FFD166' : '#6D6875';
-        ctx.font = 'bold 11px "Fredoka", sans-serif';
-        ctx.textAlign = 'right';
-        ctx.fillText(dateStr, w - 24, startY + 80);
+        ctx.font = 'bold 13px "Fredoka", sans-serif';
+        ctx.fillText(dateStr, w - 30, centerY - 8);
       }
+      if (customCaption) {
+        ctx.fillStyle = currentTheme === 'nationalDay' ? '#FFFFFF' : '#2B2D42';
+        ctx.font = 'bold 13px "Zen Maru Gothic", cursive';
+        ctx.fillText(customCaption, w - 30, centerY + 18);
+      }
+
       ctx.restore();
     }
 
@@ -1802,7 +1824,7 @@
         stripBtn.querySelector('.mode-check').classList.remove('hidden');
         singleBtn.classList.remove('bg-twCream', 'border-twRed');
         singleBtn.querySelector('.mode-check').classList.add('hidden');
-        document.getElementById('shutterText').textContent = '開始 4 連拍！';
+        document.getElementById('shutterText').textContent = '開始 2×2 四連拍！';
         if (capturedShots.length > 0) buildStudioComposite();
       });
 
